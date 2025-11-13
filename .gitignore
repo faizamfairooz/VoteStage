@@ -1,0 +1,65 @@
+### Your Current Content ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/compiler.xml
+.idea/jarRepositories.xml
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### NEW ADDITIONS FOR YOUR PROJECT ###
+# SmartTomcat configuration
+.smarttomcat/
+
+# Database files (never commit actual database)
+*.db
+*.sqlite
+*.frm
+*.myd
+*.myi
+*.ibd
+
+# Application properties with credentials
+src/main/resources/application.properties
+src/main/resources/*.properties
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
