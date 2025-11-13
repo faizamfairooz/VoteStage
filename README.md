@@ -38,7 +38,7 @@ VoteStage/
 - MySQL 5.7+
 
 ### Database Setup
-1. Create MySQL database: `voting_system`
+1. Create MySQL database: `VotingDB`
 2. Run schema: `mysql -u root -p VotingDB < VotingDB.sql`
 
 ### Configuration
