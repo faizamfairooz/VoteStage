@@ -106,4 +106,15 @@ public class ContestantService {
         System.out.println("✅ Vote cast successfully by " + voter.getName() +
                 " for contestant " + contestant.getName());
     }
+
+    // Add this method to ContestantService.java
+    public static ResultSet getVideoDetails(String videoId) throws SQLException {
+        String sql = "SELECT v.*, c.contestant_name FROM Videos v " +
+                "LEFT JOIN Contestants c ON v.contestant_id = c.contestant_id " +
+                "WHERE v.video_id = ?";
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, videoId);
+        return ps.executeQuery();
+    }
 }

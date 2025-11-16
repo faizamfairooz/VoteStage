@@ -1,709 +1,368 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="com.voting.service.JudgeService" %>
 <%@ page import="com.voting.service.CommentService" %>
+<%@ page import="com.voting.service.ContestantService" %>
 <%@ page import="com.voting.model.Comment" %>
 <%@ page import="java.sql.ResultSet" %>
 <%@ page import="java.util.List" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="java.sql.Timestamp" %>
 <%
-    // --- 1. User Session Check ---
+    // Session check
     String userName = (String) session.getAttribute("user_name");
-    Integer judgeId = (Integer) session.getAttribute("user_id");
+    String judgeId = (String) session.getAttribute("user_id");
+    String contestantId = request.getParameter("contestantId");
+    String videoId = request.getParameter("videoId");
 
-    if (userName == null || judgeId == null) {
+    if (userName == null || judgeId == null || contestantId == null || videoId == null) {
         response.sendRedirect("login.jsp");
         return;
     }
 
-    // --- 2. Contestant ID Validation ---
-    String contestantIdParam = request.getParameter("contestantId");
-    int contestantId = 0;
+    // Get video details
+    ResultSet videoDetails = null;
+    String videoTitle = "";
+    String videoPath = "";
+    String contestantName = "";
 
-    // --- 3. Load Comments & Error Handling ---
-    List<Comment> allComments = new ArrayList<>();
-    String commentLoadError = null;
-
-    if (contestantIdParam != null) {
-        try {
-            contestantId = Integer.parseInt(contestantIdParam);
-
-            if (contestantId > 0) {
-                allComments = CommentService.getCommentsByContestant(contestantId);
-
-                if (allComments == null) {
-                    commentLoadError = "Failed to load comments: Database communication error.";
-                    allComments = new ArrayList<>();
-                }
-            } else {
-                commentLoadError = "Invalid Contestant ID (must be > 0).";
-            }
-
-        } catch (NumberFormatException e) {
-            commentLoadError = "Invalid Contestant ID format.";
+    try {
+        videoDetails = ContestantService.getVideoDetails(videoId);
+        if (videoDetails != null && videoDetails.next()) {
+            videoTitle = videoDetails.getString("title");
+            videoPath = videoDetails.getString("file_path");
+            contestantName = videoDetails.getString("contestant_name");
         }
-    } else {
-        commentLoadError = "Contestant ID not specified. Please select a contestant.";
+    } catch (Exception e) {
+        e.printStackTrace();
     }
 
-    // --- 4. Optional: Load Golden Votes ---
-    ResultSet goldenVotes = null;
-    // try { goldenVotes = JudgeService.getGoldenVotes(); } catch (Exception e) {}
+    // Get comments for this video
+    List<Comment> comments = null;
+    try {
+        comments = CommentService.getCommentsByVideo(videoId);
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
 %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comment Dashboard - Contestant <%= contestantId %></title>
+    <title>Comments - <%= contestantName %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4361ee;
-            --secondary: #3f37c9;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --warning: #f8961e;
-            --info: #4895ef;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray: #6c757d;
-            --light-gray: #e9ecef;
-            --border-radius: 12px;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --transition: all 0.3s ease;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
+            color: #333;
             line-height: 1.6;
             min-height: 100vh;
             padding: 20px;
         }
 
-        .dashboard-container {
+        .container {
             max-width: 1000px;
             margin: 0 auto;
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
         }
 
-        .dashboard-header {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
             color: white;
-            padding: 25px 30px;
-            position: relative;
-            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .dashboard-header::before {
-            content: "";
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 200%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(30deg);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header-title h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
             margin-bottom: 5px;
         }
 
-        .header-title p {
-            font-size: 1rem;
-            opacity: 0.9;
-        }
-
-        .user-info {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px 15px;
-            border-radius: 50px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-icon {
+        .video-section {
             background: white;
-            color: var(--primary);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .dashboard-body {
-            padding: 30px;
-        }
-
-        .alert-message {
-            padding: 15px 20px;
-            margin-bottom: 25px;
-            border-radius: var(--border-radius);
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .success {
-            background-color: rgba(76, 201, 240, 0.15);
-            color: #0a7c9f;
-            border-left: 4px solid var(--success);
-        }
-
-        .error {
-            background-color: rgba(247, 37, 133, 0.15);
-            color: #b5175c;
-            border-left: 4px solid var(--danger);
-        }
-
-        .section {
-            background: var(--light);
-            border-radius: var(--border-radius);
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .section-title {
-            font-size: 1.4rem;
-            font-weight: 600;
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
             margin-bottom: 20px;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
-        .section-title i {
-            font-size: 1.2rem;
+        .video-container video {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+        }
+
+        .video-info {
+            padding: 15px 0;
+        }
+
+        .comment-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .comment-form {
+            margin-bottom: 30px;
         }
 
         .comment-form textarea {
             width: 100%;
             padding: 15px;
-            border: 2px solid var(--light-gray);
-            border-radius: var(--border-radius);
-            font-family: 'Poppins', sans-serif;
-            font-size: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
             resize: vertical;
-            min-height: 120px;
-            transition: var(--transition);
-        }
-
-        .comment-form textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            min-height: 100px;
+            font-size: 1rem;
+            margin-bottom: 15px;
         }
 
         .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 50px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
+            text-decoration: none;
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: #3498db;
             color: white;
         }
 
         .btn-primary:hover {
-            background: var(--secondary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+            background: #2980b9;
         }
 
-        .btn-success {
-            background: var(--success);
+        .btn-back {
+            background: #2c3e50;
             color: white;
+            margin-bottom: 20px;
         }
 
-        .btn-success:hover {
-            background: #3ab0d6;
-            transform: translateY(-2px);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #d1146a;
-            transform: translateY(-2px);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: var(--gray);
-            border: 1px solid var(--light-gray);
-        }
-
-        .btn-outline:hover {
-            background: var(--light-gray);
-            color: var(--dark);
-        }
-
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 0.85rem;
+        .btn-back:hover {
+            background: #3498db;
         }
 
         .comment-item {
-            background: white;
-            border-radius: var(--border-radius);
+            background: #f8f9fa;
+            border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--light-gray);
-            transition: var(--transition);
-        }
-
-        .comment-item:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
         }
 
         .comment-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .comment-author {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .author-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--info));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .author-name {
-            font-weight: 500;
-            color: var(--dark);
+            font-weight: 600;
+            color: #2c3e50;
         }
 
         .comment-date {
-            font-size: 0.85rem;
-            color: var(--gray);
+            color: #7f8c8d;
+            font-size: 0.9rem;
         }
 
         .comment-text {
             margin-bottom: 15px;
-            padding: 15px;
-            background: var(--light);
-            border-radius: 10px;
-            line-height: 1.7;
+            line-height: 1.5;
         }
 
         .comment-actions {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
         }
 
-        .reply-indicator {
-            font-size: 0.8rem;
-            color: var(--info);
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .btn-like {
+            background: #27ae60;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
         }
 
-        .like-count {
-            background: rgba(76, 201, 240, 0.15);
-            color: #0a7c9f;
+        .btn-edit {
+            background: #f39c12;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .likes-count {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
             padding: 2px 8px;
-            border-radius: 20px;
+            border-radius: 12px;
             font-size: 0.8rem;
-            font-weight: 500;
             margin-left: 5px;
         }
 
-        .reply-form, .edit-form {
-            margin-top: 15px;
+        .success-message {
+            background: #d4edda;
+            color: #155724;
             padding: 15px;
-            background: var(--light);
-            border-radius: 10px;
-            border: 1px dashed var(--info);
-        }
-
-        .reply-form textarea, .edit-form textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--light-gray);
             border-radius: 8px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.95rem;
-            resize: vertical;
-            min-height: 80px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
         }
 
-        .form-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .no-comments {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--gray);
-        }
-
-        .no-comments i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: var(--light-gray);
-        }
-
-        .no-comments p {
-            font-size: 1.1rem;
-        }
-
-        .comment-reply {
-            margin-left: 30px;
-            border-left: 3px solid var(--info);
-            padding-left: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-
-            .user-info {
-                align-self: flex-end;
-            }
-
-            .comment-header {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .comment-actions {
-                justify-content: center;
-            }
-
-            .comment-reply {
-                margin-left: 15px;
-            }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
         }
     </style>
 </head>
 <body>
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <div class="header-content">
-            <div class="header-title">
-                <h1>Comment Dashboard</h1>
-                <p>Contestant ID: <strong><%= contestantId %></strong></p>
-            </div>
-            <div class="user-info">
-                <div class="user-icon">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div>
-                    <div><strong><%= userName %></strong></div>
-                    <div>Judge ID: <%= judgeId %></div>
-                </div>
-            </div>
+<div class="container">
+    <header>
+        <div class="logo">VotesStage</div>
+        <div class="tagline">Comments & Feedback</div>
+    </header>
+
+    <a href="contestant-performance.jsp" class="btn btn-back">
+        <i class="fas fa-arrow-left"></i> Back to Performances
+    </a>
+
+    <!-- Success/Error Messages -->
+    <%
+        String status = request.getParameter("status");
+        String message = request.getParameter("message");
+        if ("success".equals(status)) {
+    %>
+    <div class="success-message">
+        <i class="fas fa-check-circle"></i> <%= message %>
+    </div>
+    <%
+    } else if ("error".equals(status)) {
+    %>
+    <div class="error-message">
+        <i class="fas fa-exclamation-circle"></i> <%= message %>
+    </div>
+    <%
+        }
+    %>
+
+    <!-- Video Section -->
+    <div class="video-section">
+        <h2><%= contestantName %> - <%= videoTitle %></h2>
+        <div class="video-container">
+            <video controls>
+                <source src="<%= videoPath %>" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div class="video-info">
+            <p><strong>Contestant:</strong> <%= contestantName %></p>
+            <p><strong>Performance:</strong> <%= videoTitle %></p>
         </div>
     </div>
 
-    <div class="dashboard-body">
-        <%-- Success/Error Messages Display --%>
+    <!-- Comment Section -->
+    <div class="comment-section">
+        <h3>Add Your Comment</h3>
+        <form action="CommentServlet" method="POST" class="comment-form">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="contestantId" value="<%= contestantId %>">
+            <input type="hidden" name="videoId" value="<%= videoId %>">
+
+            <textarea name="commentText" placeholder="Share your thoughts about this performance..." required></textarea>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Submit Comment
+            </button>
+        </form>
+
+        <h3>Comments (<%= comments != null ? comments.size() : 0 %>)</h3>
+
         <%
-            String status = request.getParameter("status");
-            String message = request.getParameter("message");
-            if ("success".equals(status)) {
+            if (comments != null && !comments.isEmpty()) {
+                for (Comment comment : comments) {
         %>
-        <div class="alert-message success">
-            <i class="fas fa-check-circle"></i>
-            <span>Operation successful! <%= message %></span>
+        <div class="comment-item">
+            <div class="comment-header">
+                <div class="comment-author">
+                    <i class="fas fa-user"></i>
+                    <%= comment.getJudgeName() != null ? comment.getJudgeName() : "Judge " + comment.getJudgeId() %>
+                </div>
+                <div class="comment-date">
+                    <i class="far fa-clock"></i> <%= comment.getCommentDate() %>
+                </div>
+            </div>
+            <div class="comment-text">
+                <%= comment.getCommentText() %>
+            </div>
+            <div class="comment-actions">
+                <form action="CommentServlet" method="POST" style="display: inline;">
+                    <input type="hidden" name="action" value="like">
+                    <input type="hidden" name="contestantId" value="<%= contestantId %>">
+                    <input type="hidden" name="videoId" value="<%= videoId %>">
+                    <input type="hidden" name="commentId" value="<%= comment.getCommentId() %>">
+                    <button type="submit" class="btn btn-like">
+                        <i class="fas fa-thumbs-up"></i> Like
+                        <span class="likes-count"><%= comment.getLikes() %></span>
+                    </button>
+                </form>
+
+                <% if (comment.getJudgeId().equals(judgeId)) { %>
+                <form action="CommentServlet" method="POST" style="display: inline;">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="contestantId" value="<%= contestantId %>">
+                    <input type="hidden" name="videoId" value="<%= videoId %>">
+                    <input type="hidden" name="commentId" value="<%= comment.getCommentId() %>">
+                    <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this comment?')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+                <% } %>
+            </div>
         </div>
         <%
-        } else if ("error".equals(status)) {
+            }
+        } else {
         %>
-        <div class="alert-message error">
-            <i class="fas fa-exclamation-circle"></i>
-            <span>Error: <%= message %></span>
+        <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+            <i class="far fa-comments" style="font-size: 3rem; margin-bottom: 15px;"></i>
+            <p>No comments yet. Be the first to comment!</p>
         </div>
         <%
             }
         %>
-
-        <% if (commentLoadError != null) { %>
-        <div class="alert-message error">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>Error loading comments: <%= commentLoadError %></span>
-        </div>
-        <% } %>
-
-        <div class="section">
-            <h2 class="section-title">
-                <i class="fas fa-edit"></i>
-                <span>Add New Comment</span>
-            </h2>
-
-            <%-- ADD COMMENT FORM --%>
-            <form action="CommentServlet" method="POST" class="comment-form">
-                <input type="hidden" name="action" value="add">
-                <input type="hidden" name="contestantId" value="<%= contestantId %>">
-
-                <textarea name="commentText" placeholder="Share your thoughts about this contestant..." required></textarea>
-
-                <div style="margin-top: 15px;">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i>
-                        Submit Comment
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="section">
-            <h2 class="section-title">
-                <i class="fas fa-comments"></i>
-                <span>Comments (<%= allComments != null ? allComments.size() : 0 %>)</span>
-            </h2>
-
-            <div id="comments-list">
-                <%
-                    if (commentLoadError == null && allComments != null && !allComments.isEmpty()) {
-                        for (Comment c : allComments) {
-                            String escapedText = c.getCommentText().replace("'", "\\'").replace("\n", "\\n");
-                            boolean isReply = (c.getParentId() != null && c.getParentId() != 0);
-                %>
-                <div class="comment-item <%= isReply ? "comment-reply" : "" %>" data-comment-id="<%= c.getId() %>">
-                    <div class="comment-header">
-                        <div class="comment-author">
-                            <div class="author-avatar">
-                                <%= String.valueOf(c.getJudgeId()).substring(Math.max(0, String.valueOf(c.getJudgeId()).length() - 2)) %>
-                            </div>
-                            <div>
-                                <div class="author-name">Judge <%= c.getJudgeId() %></div>
-                                <div class="comment-date">
-                                    <i class="far fa-clock"></i>
-                                    <%= c.getCommentDate() %>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <% if (isReply) { %>
-                    <div class="reply-indicator">
-                        <i class="fas fa-reply"></i>
-                        Replying to a comment
-                    </div>
-                    <% } %>
-
-                    <div class="comment-text" id="text-<%= c.getId() %>">
-                        <%= c.getCommentText() %>
-                    </div>
-
-                    <div class="comment-actions">
-                        <%-- REACT FORM --%>
-                        <form method="POST" action="CommentServlet" style="display:inline;">
-                            <input type="hidden" name="action" value="react">
-                            <input type="hidden" name="contestantId" value="<%= contestantId %>">
-                            <input type="hidden" name="commentId" value="<%= c.getId() %>">
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="fas fa-thumbs-up"></i>
-                                Like <span class="like-count"><%= c.getLikes() %></span>
-                            </button>
-                        </form>
-
-                        <%-- REPLY BUTTON --%>
-                        <button type="button" class="btn btn-outline btn-sm"
-                                onclick="toggleReplyForm(<%= c.getId() %>)">
-                            <i class="fas fa-reply"></i>
-                            Reply
-                        </button>
-
-                        <% if (c.getJudgeId() == judgeId) { %>
-                        <%-- EDIT BUTTON --%>
-                        <button type="button" class="btn btn-outline btn-sm"
-                                onclick="toggleEditForm(<%= c.getId() %>, '<%= escapedText %>')">
-                            <i class="fas fa-edit"></i>
-                            Edit
-                        </button>
-
-                        <%-- DELETE FORM --%>
-                        <form method="POST" action="CommentServlet" style="display:inline;"
-                              onsubmit="return confirm('Are you sure you want to delete this comment? This action cannot be undone.');">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="contestantId" value="<%= contestantId %>">
-                            <input type="hidden" name="commentId" value="<%= c.getId() %>">
-                            <button type="submit" class="btn btn-danger btn-sm">
-                                <i class="fas fa-trash"></i>
-                                Delete
-                            </button>
-                        </form>
-                        <% } %>
-                    </div>
-
-                    <%-- EDIT FORM --%>
-                    <div id="edit-form-<%= c.getId() %>" class="edit-form" style="display:none;">
-                        <form action="CommentServlet" method="POST">
-                            <input type="hidden" name="action" value="edit">
-                            <input type="hidden" name="contestantId" value="<%= contestantId %>">
-                            <input type="hidden" name="commentId" value="<%= c.getId() %>">
-                            <textarea id="edit-textarea-<%= c.getId() %>" name="newCommentText" required></textarea>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-save"></i>
-                                    Save Changes
-                                </button>
-                                <button type="button" class="btn btn-outline btn-sm"
-                                        onclick="toggleEditForm(<%= c.getId() %>, '')">
-                                    <i class="fas fa-times"></i>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <%-- REPLY FORM --%>
-                    <div id="reply-form-<%= c.getId() %>" class="reply-form" style="display:none;">
-                        <form action="CommentServlet" method="POST">
-                            <input type="hidden" name="action" value="reply">
-                            <input type="hidden" name="contestantId" value="<%= contestantId %>">
-                            <input type="hidden" name="parentId" value="<%= c.getId() %>">
-                            <textarea name="commentText" placeholder="Write your reply..." required></textarea>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-paper-plane"></i>
-                                    Post Reply
-                                </button>
-                                <button type="button" class="btn btn-outline btn-sm"
-                                        onclick="toggleReplyForm(<%= c.getId() %>)">
-                                    <i class="fas fa-times"></i>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <%
-                    }
-                } else if (commentLoadError == null) {
-                %>
-                <div class="no-comments">
-                    <i class="far fa-comments"></i>
-                    <p>No comments yet for Contestant <%= contestantId %></p>
-                    <p style="margin-top: 10px; font-size: 0.95rem;">Be the first to share your thoughts!</p>
-                </div>
-                <%
-                    }
-                %>
-            </div>
-        </div>
     </div>
 </div>
-
-<script>
-    // Toggle edit form visibility
-    function toggleEditForm(commentId, currentText) {
-        const formDiv = document.getElementById('edit-form-' + commentId);
-        const textarea = document.getElementById('edit-textarea-' + commentId);
-        const displayDiv = document.getElementById('text-' + commentId);
-
-        if (formDiv.style.display === 'none') {
-            // Hide all other open forms before showing this one
-            document.querySelectorAll('[id^="edit-form-"]').forEach(div => div.style.display = 'none');
-            document.querySelectorAll('[id^="reply-form-"]').forEach(div => div.style.display = 'none');
-            document.querySelectorAll('.comment-text').forEach(div => div.style.display = 'block');
-
-            // Show the target form
-            displayDiv.style.display = 'none';
-            formDiv.style.display = 'block';
-            textarea.value = currentText.replace(/\\n/g, '\n');
-            textarea.focus();
-        } else {
-            // Hide form
-            formDiv.style.display = 'none';
-            displayDiv.style.display = 'block';
-        }
-    }
-
-    // Toggle reply form visibility
-    function toggleReplyForm(commentId) {
-        const formDiv = document.getElementById('reply-form-' + commentId);
-
-        if (formDiv.style.display === 'none') {
-            // Hide all other open forms before showing this one
-            document.querySelectorAll('[id^="edit-form-"]').forEach(div => div.style.display = 'none');
-            document.querySelectorAll('[id^="reply-form-"]').forEach(div => div.style.display = 'none');
-            document.querySelectorAll('.comment-text').forEach(div => div.style.display = 'block');
-
-            // Show the target form
-            formDiv.style.display = 'block';
-            formDiv.querySelector('textarea').focus();
-        } else {
-            // Hide form
-            formDiv.style.display = 'none';
-        }
-    }
-
-    // Add smooth scrolling to comments after form submission
-    window.addEventListener('load', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('status')) {
-            document.getElementById('comments-list').scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-    });
-</script>
 </body>
 </html>

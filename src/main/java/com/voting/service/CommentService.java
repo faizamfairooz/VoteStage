@@ -1,42 +1,43 @@
-package com.voting.service; // Must be in the 'com/voting/service' folder
+package com.voting.service;
 
 import com.voting.dao.CommentDAO;
 import com.voting.model.Comment;
-
 import java.util.List;
 
 public class CommentService {
-    // FIX: This package is required for the Servlet and JSP to import this class.
 
-    // Get all comments for a contestant (Catches exception internally for JSP compatibility)
-    public static List<Comment> getCommentsByContestant(String contestantId) {
+    // Get all comments for a video
+    public static List<Comment> getCommentsByVideo(String videoId) {
         try {
-            return CommentDAO.getCommentsByContestant(Integer.parseInt(contestantId));
+            return CommentDAO.getCommentsByVideo(videoId);
         } catch (Exception e) {
             e.printStackTrace();
-            return null; // Returns null on failure, which the JSP handles
+            return null;
         }
     }
 
-    // Add new comment
+    // Add new comment with debug logging
     public static boolean addComment(Comment comment) {
         try {
+            System.out.println("=== COMMENT SERVICE DEBUG ===");
+            System.out.println("Judge ID: " + comment.getJudgeId());
+            System.out.println("Video ID: " + comment.getVideoId());
+            System.out.println("Comment Text: " + comment.getCommentText());
+
             CommentDAO.addComment(comment);
+            System.out.println("Comment added successfully!");
             return true;
         } catch (Exception e) {
+            System.err.println("ERROR in addComment: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
     }
 
     // Update existing comment
-    public static boolean updateComment(int commentId, String newText) {
+    public static boolean updateComment(String commentId, String newText) {
         try {
-            Comment c = new Comment();
-            c.setId(commentId);
-            c.setCommentText(newText);
-            c.setCommentDate(new java.sql.Timestamp(System.currentTimeMillis()));
-            CommentDAO.updateComment(c);
+            CommentDAO.updateComment(commentId, newText);
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -45,7 +46,7 @@ public class CommentService {
     }
 
     // Delete comment
-    public static boolean deleteComment(int commentId) {
+    public static boolean deleteComment(String commentId) {
         try {
             CommentDAO.deleteComment(commentId);
             return true;
@@ -55,10 +56,10 @@ public class CommentService {
         }
     }
 
-    // React comment method
-    public static boolean reactComment(int commentId) {
+    // Like comment method
+    public static boolean likeComment(String commentId) {
         try {
-            CommentDAO.reactComment(commentId);
+            CommentDAO.likeComment(commentId);
             return true;
         } catch (Exception e) {
             e.printStackTrace();

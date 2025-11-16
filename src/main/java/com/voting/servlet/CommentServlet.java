@@ -23,10 +23,11 @@ public class CommentServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         String judgeId = (String) session.getAttribute("user_id");
+        String videoId = request.getParameter("videoId");
         String contestantId = request.getParameter("contestantId");
         String action = request.getParameter("action");
 
-        if (judgeId == null || contestantId == null || action == null) {
+        if (judgeId == null || videoId == null || action == null) {
             response.sendRedirect("error.jsp?message=InvalidSessionOrParameters");
             return;
         }
@@ -34,78 +35,53 @@ public class CommentServlet extends HttpServlet {
         boolean success = false;
         String message = "";
 
-        // --- Handle Actions ---
-        if ("add".equals(action) || "reply".equals(action)) {
+        // Handle Actions
+        if ("add".equals(action)) {
             String commentText = request.getParameter("commentText");
-            String parentIdParam = request.getParameter("parentId");
 
             if (commentText != null && !commentText.trim().isEmpty()) {
                 Comment comment = new Comment();
                 comment.setJudgeId(judgeId);
+                comment.setVideoId(videoId);
                 comment.setContestantId(contestantId);
                 comment.setCommentText(commentText);
                 comment.setCommentDate(new Timestamp(System.currentTimeMillis()));
 
-                if ("reply".equals(action) && parentIdParam != null && !parentIdParam.isEmpty()) {
-                    try {
-                        comment.setParentId(Integer.parseInt(parentIdParam));
-                    } catch (NumberFormatException e) { }
-                }
-
                 success = CommentService.addComment(comment);
-                message = success ? "addSuccess" : "addError";
+                message = success ? "Comment added successfully!" : "Failed to add comment";
             }
 
         } else if ("edit".equals(action)) {
-            String commentIdParam = request.getParameter("commentId");
+            String commentId = request.getParameter("commentId");
             String newText = request.getParameter("newCommentText");
 
-            if (commentIdParam != null && newText != null) {
-                try {
-                    int commentId = Integer.parseInt(commentIdParam);
-                    success = CommentService.updateComment(commentId, newText);
-                    message = success ? "editSuccess" : "editError";
-                } catch (NumberFormatException e) {
-                    message = "InvalidCommentIDForEdit";
-                }
+            if (commentId != null && newText != null) {
+                success = CommentService.updateComment(commentId, newText);
+                message = success ? "Comment updated successfully!" : "Failed to update comment";
             }
 
         } else if ("delete".equals(action)) {
-            String commentIdParam = request.getParameter("commentId");
+            String commentId = request.getParameter("commentId");
 
-            if (commentIdParam != null) {
-                try {
-                    int commentId = Integer.parseInt(commentIdParam);
-                    success = CommentService.deleteComment(commentId);
-                    message = success ? "deleteSuccess" : "deleteError";
-                } catch (NumberFormatException e) {
-                    message = "InvalidCommentIDForDelete";
-                }
+            if (commentId != null) {
+                success = CommentService.deleteComment(commentId);
+                message = success ? "Comment deleted successfully!" : "Failed to delete comment";
             }
 
-        } else if ("react".equals(action)) {
-            String commentIdParam = request.getParameter("commentId");
+        } else if ("like".equals(action)) {
+            String commentId = request.getParameter("commentId");
 
-            if (commentIdParam != null) {
-                try {
-                    int commentId = Integer.parseInt(commentIdParam);
-                    success = CommentService.reactComment(commentId);
-                    message = success ? "reactSuccess" : "reactError";
-                } catch (NumberFormatException e) {
-                    message = "InvalidCommentIDForReact";
-                }
+            if (commentId != null) {
+                success = CommentService.likeComment(commentId);
+                message = success ? "Comment liked!" : "Failed to like comment";
             }
 
         } else {
-            message = "UnknownAction";
+            message = "Unknown action";
         }
 
-        // --- FINAL REDIRECT ---
+        // Redirect back to comment page
         String status = success ? "success" : "error";
-        // FIX: If you renamed comment-dashboard.jsp to comment.jsp, use comment.jsp here.
-        // If you did NOT rename it, but your entry button/link is still broken, use comment-dashboard.jsp
-
-        // අපි comment.jsp වලට rename කල බව සිතා redirect කරමු:
-        response.sendRedirect("comment.jsp?contestantId=" + contestantId + "&status=" + status + "&message=" + message);
+        response.sendRedirect("comment.jsp?contestantId=" + contestantId + "&videoId=" + videoId + "&status=" + status + "&message=" + message);
     }
 }
