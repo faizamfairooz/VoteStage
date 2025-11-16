@@ -194,6 +194,7 @@ public class JudgeDAO {
         }
     }
 
+
     // Method to record regular vote
     public static void recordRegularVote(String judgeId, String contestantId, String contestantName,
                                          String performance, String judgeName, String videoId) throws SQLException {
@@ -247,5 +248,21 @@ public class JudgeDAO {
             }
             return false;
         }
+    }
+
+    // In JudgeDAO.java - Add method to get regular votes for dashboard
+    public static ResultSet getRegularVotes() throws SQLException {
+        // Updated SQL to include contestant name and performance title
+        String sql = "SELECT r.vote_id, r.contestant_id, c.contestant_name, " +
+                "v.title as performance, r.vote_date, p.name as judge_name, r.score " +
+                "FROM RegularVotes r " +
+                "LEFT JOIN Contestants c ON r.contestant_id = c.contestant_id " +
+                "LEFT JOIN Videos v ON r.video_id = v.video_id " +
+                "LEFT JOIN Persons p ON r.person_id = p.person_id " +
+                "ORDER BY r.vote_date DESC";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        return ps.executeQuery();
     }
 }

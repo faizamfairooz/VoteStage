@@ -247,6 +247,54 @@
             border-radius: 4px;
         }
 
+        /* Add these styles to the existing CSS in judge-dashboard.jsp */
+
+        .regular-vote-item {
+            background-color: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .regular-votes-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Style for both golden and regular vote items */
+        .golden-vote-item, .regular-vote-item {
+            transition: background-color 0.3s ease;
+        }
+
+        .golden-vote-item:hover, .regular-vote-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Scrollbar styling */
+        .regular-votes-list::-webkit-scrollbar,
+        .golden-votes-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .regular-votes-list::-webkit-scrollbar-track,
+        .golden-votes-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .regular-votes-list::-webkit-scrollbar-thumb,
+        .golden-votes-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .regular-votes-list::-webkit-scrollbar-thumb:hover,
+        .golden-votes-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
         @media (max-width: 768px) {
             .navbar ul {
                 flex-direction: column;
@@ -329,6 +377,56 @@
                     No golden votes recorded yet.
                 </div>
                 <%
+                    }
+                %>
+            </div>
+        </div>
+
+        <!-- Add this new card after the Golden Votes card in judge-dashboard.jsp -->
+
+        <div class="card">
+            <h2><i class="fas fa-vote-yea" style="color: #3498db;"></i> Recent Regular Votes</h2>
+            <div class="regular-votes-list">
+                <%
+                    ResultSet regularVotes = null;
+                    try {
+                        regularVotes = JudgeService.getRegularVotes();
+                        boolean hasRegularVotes = false;
+                        int count = 0;
+                        while (regularVotes != null && regularVotes.next() && count < 5) {
+                            hasRegularVotes = true;
+                            count++;
+                %>
+                <div class="regular-vote-item">
+                    <i class="fas fa-vote-yea" style="color: #3498db;"></i>
+                    <strong><%= regularVotes.getString("judge_name") != null ? regularVotes.getString("judge_name") : "Judge" %></strong>
+                    → <%= regularVotes.getString("contestant_name") != null ? regularVotes.getString("contestant_name") : "Contestant" %>
+                    <br><small>Performance: <%= regularVotes.getString("performance") != null ? regularVotes.getString("performance") : "Music Performance" %></small>
+                    <br><small>Score: <%= regularVotes.getInt("score") %> points</small>
+                    <br><small>Date: <%= regularVotes.getString("vote_date") != null ? regularVotes.getString("vote_date") : "Recently" %></small>
+                </div>
+                <%
+                    }
+                    if (!hasRegularVotes) {
+                %>
+                <div class="regular-vote-item">
+                    <i class="fas fa-vote-yea" style="color: #3498db;"></i>
+                    No regular votes recorded yet.
+                </div>
+                <%
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                %>
+                <div class="regular-vote-item">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading regular votes.
+                </div>
+                <%
+                    } finally {
+                        if (regularVotes != null) {
+                            try { regularVotes.close(); } catch (Exception e) {}
+                        }
                     }
                 %>
             </div>

@@ -92,4 +92,9 @@ public class JudgeService {
         // Use JudgeDAO instead of creating new connection
         return JudgeDAO.hasGivenAnyGoldenVote(judgeId);
     }
+
+    // In JudgeService.java - Add method to get regular votes
+    public static ResultSet getRegularVotes() throws SQLException {
+        return JudgeDAO.getRegularVotes();
+    }
 }
