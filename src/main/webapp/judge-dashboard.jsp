@@ -356,27 +356,39 @@
             <h2>Recent Golden Votes</h2>
             <div class="golden-votes-list">
                 <%
-                    if (goldenVotes != null) {
-                        try {
-                            while (goldenVotes.next()) {
+                    ResultSet judgeGoldenVotes = null;
+                    try {
+                        judgeGoldenVotes = JudgeService.getGoldenVotesByJudge(judgeId);
+                        boolean hasGoldenVotes = false;
+                        while (judgeGoldenVotes.next()) {
+                            hasGoldenVotes = true;
                 %>
                 <div class="golden-vote-item">
-                    <strong><%= goldenVotes.getString("judge_name") %></strong>
-                    → <%= goldenVotes.getString("contestant_name") %>
-                    <br><small>Performance: <%= goldenVotes.getString("performance") %></small>
-                    <br><small>Date: <%= goldenVotes.getString("vote_date") %></small>
+                    <strong>You</strong>
+                    → <%= judgeGoldenVotes.getString("contestant_name") %>
+                    <br><small>Performance: <%= judgeGoldenVotes.getString("performance") %></small>
+                    <br><small>Date: <%= judgeGoldenVotes.getString("vote_date") %></small>
                 </div>
                 <%
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
-                } else {
+                    if (!hasGoldenVotes) {
                 %>
                 <div class="golden-vote-item">
-                    No golden votes recorded yet.
+                    No golden votes given yet.
                 </div>
                 <%
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                %>
+                <div class="golden-vote-item">
+                    Error loading your golden votes.
+                </div>
+                <%
+                    } finally {
+                        if (judgeGoldenVotes != null) {
+                            try { judgeGoldenVotes.close(); } catch (Exception e) {}
+                        }
                     }
                 %>
             </div>
@@ -385,25 +397,25 @@
         <!-- Add this new card after the Golden Votes card in judge-dashboard.jsp -->
 
         <div class="card">
-            <h2><i class="fas fa-vote-yea" style="color: #3498db;"></i> Recent Regular Votes</h2>
+            <h2><i class="fas fa-vote-yea" style="color: #3498db;"></i> Your Recent Votes</h2>
             <div class="regular-votes-list">
                 <%
-                    ResultSet regularVotes = null;
+                    ResultSet judgeRegularVotes = null;
                     try {
-                        regularVotes = JudgeService.getRegularVotes();
+                        judgeRegularVotes = JudgeService.getRegularVotesByJudge(judgeId);
                         boolean hasRegularVotes = false;
                         int count = 0;
-                        while (regularVotes != null && regularVotes.next() && count < 5) {
+                        while (judgeRegularVotes != null && judgeRegularVotes.next() && count < 5) {
                             hasRegularVotes = true;
                             count++;
                 %>
                 <div class="regular-vote-item">
                     <i class="fas fa-vote-yea" style="color: #3498db;"></i>
-                    <strong><%= regularVotes.getString("judge_name") != null ? regularVotes.getString("judge_name") : "Judge" %></strong>
-                    → <%= regularVotes.getString("contestant_name") != null ? regularVotes.getString("contestant_name") : "Contestant" %>
-                    <br><small>Performance: <%= regularVotes.getString("performance") != null ? regularVotes.getString("performance") : "Music Performance" %></small>
-                    <br><small>Score: <%= regularVotes.getInt("score") %> points</small>
-                    <br><small>Date: <%= regularVotes.getString("vote_date") != null ? regularVotes.getString("vote_date") : "Recently" %></small>
+                    <strong>You</strong>
+                    → <%= judgeRegularVotes.getString("contestant_name") %>
+                    <br><small>Performance: <%= judgeRegularVotes.getString("performance") %></small>
+                    <br><small>Score: <%= judgeRegularVotes.getInt("score") %> points</small>
+                    <br><small>Date: <%= judgeRegularVotes.getString("vote_date") %></small>
                 </div>
                 <%
                     }
@@ -411,7 +423,7 @@
                 %>
                 <div class="regular-vote-item">
                     <i class="fas fa-vote-yea" style="color: #3498db;"></i>
-                    No regular votes recorded yet.
+                    No regular votes given yet.
                 </div>
                 <%
                     }
@@ -420,12 +432,12 @@
                 %>
                 <div class="regular-vote-item">
                     <i class="fas fa-exclamation-triangle"></i>
-                    Error loading regular votes.
+                    Error loading your votes.
                 </div>
                 <%
                     } finally {
-                        if (regularVotes != null) {
-                            try { regularVotes.close(); } catch (Exception e) {}
+                        if (judgeRegularVotes != null) {
+                            try { judgeRegularVotes.close(); } catch (Exception e) {}
                         }
                     }
                 %>

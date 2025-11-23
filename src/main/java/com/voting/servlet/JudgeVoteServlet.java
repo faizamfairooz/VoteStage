@@ -71,7 +71,12 @@ public class JudgeVoteServlet extends HttpServlet {
 
     private void handleGiveGoldenVote(HttpSession session, String judgeId, String contestantId,
                                       String contestantName, String judgeName, String videoId) throws SQLException {
-        // REMOVED THE CHECK - JUST GIVE THE VOTE
+        // Check if judge already has an active golden vote
+        if (JudgeService.hasGivenAnyGoldenVote(judgeId)) {
+            session.setAttribute("errorMessage", "You have already used your golden vote! Revoke it first to give to another contestant.");
+            return;
+        }
+
         boolean success = JudgeService.recordGoldenVote(
                 judgeId, contestantId, contestantName, "Performance", judgeName, videoId);
 
@@ -84,35 +89,16 @@ public class JudgeVoteServlet extends HttpServlet {
 
     private void handleRevokeGoldenVote(HttpSession session, String judgeId, String contestantId,
                                         String contestantName) throws SQLException {
-        System.out.println("Attempting to revoke golden vote for judge: " + judgeId);
+        System.out.println("DEBUG: Revoking golden vote for judge: " + judgeId + ", contestant: " + contestantId);
 
-        // Get current golden vote info first
-        String currentGoldenContestantId = null;
-        String currentGoldenContestantName = null;
-
-        try {
-            ResultSet goldenVote = JudgeService.getJudgeGoldenVote(judgeId);
-            if (goldenVote.next()) {
-                currentGoldenContestantId = goldenVote.getString("contestant_id");
-                currentGoldenContestantName = goldenVote.getString("contestant_name");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        boolean revoked = JudgeService.revokeGoldenVote(judgeId, currentGoldenContestantId);
-        System.out.println("Revocation result: " + revoked);
+        // Revoke using the contestantId from the current request
+        boolean revoked = JudgeService.revokeGoldenVote(judgeId, contestantId);
+        System.out.println("DEBUG: Revocation result: " + revoked);
 
         if (revoked) {
-            String message = "Golden vote successfully revoked";
-            if (currentGoldenContestantName != null && !currentGoldenContestantName.equals(contestantName)) {
-                message += " from " + currentGoldenContestantName;
-            }
-            message += "!";
-
-            session.setAttribute("successMessage", message);
+            session.setAttribute("successMessage", "Golden vote successfully revoked from " + contestantName + "!");
         } else {
-            session.setAttribute("errorMessage", "Failed to revoke golden vote!");
+            session.setAttribute("errorMessage", "Failed to revoke golden vote from " + contestantName + "! Please try again.");
         }
     }
 }

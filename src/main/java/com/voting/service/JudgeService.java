@@ -23,7 +23,7 @@ public class JudgeService {
     }
 
     // Add this method to JudgeService.java
-    public static ResultSet getJudgeGoldenVote(String judgeId) {
+    /*public static ResultSet getJudgeGoldenVote(String judgeId) {
         Connection conn = null;
         try {
             String sql = "SELECT g.contestant_id, c.contestant_name, g.vote_date " +
@@ -37,7 +37,7 @@ public class JudgeService {
             e.printStackTrace();
             return null;
         }
-    }
+    }*/
 
 
     // New method to handle golden vote
@@ -76,12 +76,17 @@ public class JudgeService {
         return true;
     }
 
+    // In JudgeService.java - FIX the getJudgeGoldenVote method
+    public static ResultSet getJudgeGoldenVote(String judgeId) throws SQLException {
+        return JudgeDAO.getJudgeGoldenVote(judgeId);
+    }
+
     // Add this method to your existing JudgeService.java
     public static boolean hasGivenGoldenVote(String judgeId, String contestantId) throws SQLException {
         return JudgeDAO.hasGivenGoldenVote(judgeId, contestantId);
     }
 
-    // Add this method to your existing JudgeService.java
+    // In JudgeService.java - FIX the revokeGoldenVote method
     public static boolean revokeGoldenVote(String judgeId, String contestantId) throws SQLException {
         return JudgeDAO.revokeGoldenVote(judgeId, contestantId);
     }
@@ -91,6 +96,20 @@ public class JudgeService {
     public static boolean hasGivenAnyGoldenVote(String judgeId) throws SQLException {
         // Use JudgeDAO instead of creating new connection
         return JudgeDAO.hasGivenAnyGoldenVote(judgeId);
+    }
+
+    // In JudgeService.java - Add this method
+    public static String getCurrentGoldenVoteContestantId(String judgeId) throws SQLException {
+        return JudgeDAO.getCurrentGoldenVoteContestantId(judgeId);
+    }
+
+    // In JudgeService.java - Add these methods
+    public static ResultSet getGoldenVotesByJudge(String judgeId) throws SQLException {
+        return JudgeDAO.getGoldenVotesByJudge(judgeId);
+    }
+
+    public static ResultSet getRegularVotesByJudge(String judgeId) throws SQLException {
+        return JudgeDAO.getRegularVotesByJudge(judgeId);
     }
 
     // In JudgeService.java - Add method to get regular votes

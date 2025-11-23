@@ -32,26 +32,20 @@
     if (errorMessage != null) session.removeAttribute("errorMessage");
 
     // Check golden vote status
+    // Check golden vote status - FIXED VERSION
     boolean hasUsedGoldenVote = false;
     String currentGoldenVoteContestantId = null;
-    String currentGoldenVoteContestant = "another contestant";
     boolean hasGivenToThisContestant = false;
 
     try {
         hasUsedGoldenVote = JudgeService.hasGivenAnyGoldenVote(judgeId);
 
         if (hasUsedGoldenVote) {
-            ResultSet goldenVote = JudgeService.getJudgeGoldenVote(judgeId);
-            if (goldenVote.next()) {
-                currentGoldenVoteContestantId = goldenVote.getString("contestant_id");
-                currentGoldenVoteContestant = goldenVote.getString("contestant_name");
-
-                if (currentGoldenVoteContestant == null || currentGoldenVoteContestant.trim().isEmpty()) {
-                    currentGoldenVoteContestant = "Contestant " + currentGoldenVoteContestantId;
-                }
-
-                hasGivenToThisContestant = Objects.equals(currentGoldenVoteContestantId, contestantId);
-            }
+            // Get the actual contestant ID who received the golden vote
+            currentGoldenVoteContestantId = JudgeService.getCurrentGoldenVoteContestantId(judgeId);
+            hasGivenToThisContestant = contestantId.equals(currentGoldenVoteContestantId);
+            System.out.println("DEBUG: Judge " + judgeId + " has golden vote for contestant: " + currentGoldenVoteContestantId);
+            System.out.println("DEBUG: Current contestant: " + contestantId + ", hasGivenToThisContestant: " + hasGivenToThisContestant);
         }
     } catch (Exception e) {
         e.printStackTrace();
@@ -324,7 +318,7 @@
     <% } else if (hasUsedGoldenVote) { %>
     <div class="golden-vote-warning">
         <i class="fas fa-exclamation-triangle"></i>
-        <strong>You have already used your golden vote on <%= currentGoldenVoteContestant %>.</strong>
+        <strong>You have already used your golden vote on <%= currentGoldenVoteContestantId %>.</strong>
         You must revoke it first before giving it to another contestant.
     </div>
     <% } else { %>
@@ -375,10 +369,9 @@
                 <i class="fas fa-times"></i> Revoke Golden Vote
             </button>
             <% } else if (hasUsedGoldenVote) { %>
-            <button type="button" class="btn btn-transfer" onclick="location.href='contestant-performance.jsp'">
-                <i class="fas fa-lock"></i>Vote Locked
+            <button type="button" class="btn" style="background: #95a5a6; color: white; cursor: not-allowed;" disabled>
+                <i class="fas fa-lock"></i> Golden Vote Used
             </button>
-
             <% } else { %>
             <button type="submit" name="voteType" value="golden" class="btn btn-golden-large">
                 <i class="fas fa-crown"></i> Give Golden Vote
@@ -425,6 +418,24 @@
                 }
             });
         }
+
+    // Auto-refresh the page after voting to update button states
+    function checkForVoteUpdate() {
+        // If we have a success message, the vote was processed
+        const successMessage = document.querySelector('.success-message');
+        const errorMessage = document.querySelector('.error-message');
+
+        if (successMessage || errorMessage) {
+            // Refresh the page after 1 second to update button states
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+    }
+
+    // Check on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        checkForVoteUpdate();
     });
 </script>
 </body>

@@ -148,6 +148,7 @@ public class JudgeDAO {
 
 
     // Check if judge has already given any golden vote (to any contestant)
+    // In JudgeDAO.java - FIX the hasGivenAnyGoldenVote method
     public static boolean hasGivenAnyGoldenVote(String judgeId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM GoldenVotes WHERE person_id = ? AND status = 'Active'";
 
@@ -176,6 +177,7 @@ public class JudgeDAO {
     }
 
     // In JudgeDAO.java - ENHANCE the revokeGoldenVote method
+    // In JudgeDAO.java - FIX the revokeGoldenVote method
     public static boolean revokeGoldenVote(String judgeId, String contestantId) throws SQLException {
         String sql = "UPDATE GoldenVotes SET status = 'Revoked' WHERE person_id = ? AND contestant_id = ? AND status = 'Active'";
 
@@ -190,8 +192,58 @@ public class JudgeDAO {
             int rowsAffected = ps.executeUpdate();
             System.out.println("DEBUG: Rows affected by revocation: " + rowsAffected);
 
-            return rowsAffected > 0;
+            return false;
         }
+    }
+
+    // In JudgeDAO.java - Add this method
+    public static String getCurrentGoldenVoteContestantId(String judgeId) throws SQLException {
+        String sql = "SELECT contestant_id FROM GoldenVotes WHERE person_id = ? AND status = 'Active'";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, judgeId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("contestant_id");
+            }
+            return null;
+        }
+    }
+
+    // In JudgeDAO.java - Add these methods
+    public static ResultSet getGoldenVotesByJudge(String judgeId) throws SQLException {
+        String sql = "SELECT g.vote_id, g.contestant_id, c.contestant_name, " +
+                "v.title as performance, g.vote_date, p.name as judge_name " +
+                "FROM GoldenVotes g " +
+                "LEFT JOIN Contestants c ON g.contestant_id = c.contestant_id " +
+                "LEFT JOIN Videos v ON g.video_id = v.video_id " +
+                "LEFT JOIN Persons p ON g.person_id = p.person_id " +
+                "WHERE g.person_id = ? AND g.status = 'Active' " +
+                "ORDER BY g.vote_date DESC";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, judgeId);
+        return ps.executeQuery();
+    }
+
+    public static ResultSet getRegularVotesByJudge(String judgeId) throws SQLException {
+        String sql = "SELECT r.vote_id, r.contestant_id, c.contestant_name, " +
+                "v.title as performance, r.vote_date, p.name as judge_name, r.score " +
+                "FROM RegularVotes r " +
+                "LEFT JOIN Contestants c ON r.contestant_id = c.contestant_id " +
+                "LEFT JOIN Videos v ON r.video_id = v.video_id " +
+                "LEFT JOIN Persons p ON r.person_id = p.person_id " +
+                "WHERE r.person_id = ? " +
+                "ORDER BY r.vote_date DESC";
+
+        Connection conn = DBConnection.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, judgeId);
+        return ps.executeQuery();
     }
 
 
